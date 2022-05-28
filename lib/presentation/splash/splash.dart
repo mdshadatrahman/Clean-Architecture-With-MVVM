@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_advaced/presentation/resources/assets_manager.dart';
 import 'package:flutter_advaced/presentation/resources/color_manager.dart';
