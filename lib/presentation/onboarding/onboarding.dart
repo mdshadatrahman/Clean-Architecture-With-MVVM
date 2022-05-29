@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_advaced/presentation/base/onboarding_viewmodel.dart';
 import 'package:flutter_advaced/presentation/resources/assets_manager.dart';
 import 'package:flutter_advaced/presentation/resources/color_manager.dart';
 import 'package:flutter_advaced/presentation/resources/routes_manager.dart';
 import 'package:flutter_advaced/presentation/resources/string_manager.dart';
 import 'package:flutter_advaced/presentation/resources/value_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../domain/model.dart';
 
 class OnBoardingView extends StatefulWidget {
   const OnBoardingView({Key? key}) : super(key: key);
@@ -16,86 +19,84 @@ class OnBoardingView extends StatefulWidget {
 
 class _OnBoardingViewState extends State<OnBoardingView> {
   final PageController _pageController = PageController(initialPage: 0);
-  late final List<SliderObject> _list = _getSliderObject();
-  int _currentIndex = 0;
 
-  List<SliderObject> _getSliderObject() => [
-        SliderObject(
-          AppStrings.onBoardingTitle1,
-          AppStrings.onBoardingSubTitle1,
-          ImageAssets.onboardingLogo1,
-        ),
-        SliderObject(
-          AppStrings.onBoardingTitle2,
-          AppStrings.onBoardingSubTitle2,
-          ImageAssets.onboardingLogo2,
-        ),
-        SliderObject(
-          AppStrings.onBoardingTitle3,
-          AppStrings.onBoardingSubTitle3,
-          ImageAssets.onboardingLogo3,
-        ),
-        SliderObject(
-          AppStrings.onBoardingTitle4,
-          AppStrings.onBoardingSubTitle4,
-          ImageAssets.onboardingLogo4,
-        ),
-      ];
+  final OnBoardingViewModel _viewModel = OnBoardingViewModel();
+
+  _bind() {
+    _viewModel.start();
+  }
+
+  @override
+  void initState() {
+    _bind();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ColorManager.white,
-      appBar: AppBar(
-        elevation: AppSize.s0,
-        backgroundColor: ColorManager.white,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarColor: ColorManager.white,
-        ),
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: _list.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        itemBuilder: (context, index) {
-          return OnBoardingPage(_list[index]);
-          //return onBoardingPage
-        },
-      ),
-      bottomSheet: Container(
-        color: ColorManager.white,
-        height: AppSize.s100,
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, Routes.loginRoute);
-                },
-                child: Text(
-                  AppStrings.skip,
-                  style: Theme.of(context).textTheme.subtitle2,
-                  textAlign: TextAlign.end,
-
-                  // style: ,
-                ),
-              ),
-            ),
-            _getBottomSheetWidget(),
-          ],
-        ),
-      ),
+    return StreamBuilder<SliderViewObject>(
+      stream: _viewModel.outputSliderViewObject,
+      builder: (context, snapShot) {
+        return _getContentWidget(snapShot.data);
+      },
     );
   }
 
-  Widget _getBottomSheetWidget() {
+  Widget _getContentWidget(SliderViewObject? sliderViewObject) {
+    if (sliderViewObject == null) {
+      return Container();
+    } else {
+      return Scaffold(
+        backgroundColor: ColorManager.white,
+        appBar: AppBar(
+          elevation: AppSize.s0,
+          backgroundColor: ColorManager.white,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarColor: ColorManager.white,
+          ),
+        ),
+        body: PageView.builder(
+          controller: _pageController,
+          itemCount: sliderViewObject.numOfSlides,
+          onPageChanged: (index) {
+            _viewModel.onPageChanged(index);
+          },
+          itemBuilder: (context, index) {
+            return OnBoardingPage(sliderViewObject.sliderObject);
+            //return onBoardingPage
+          },
+        ),
+        bottomSheet: Container(
+          color: ColorManager.white,
+          height: AppSize.s100,
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, Routes.loginRoute);
+                  },
+                  child: Text(
+                    AppStrings.skip,
+                    style: Theme.of(context).textTheme.subtitle2,
+                    textAlign: TextAlign.end,
+
+                    // style: ,
+                  ),
+                ),
+              ),
+              _getBottomSheetWidget(sliderViewObject),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _getBottomSheetWidget(SliderViewObject sliderViewObject) {
     return Container(
       color: ColorManager.primary,
       child: Row(
@@ -113,7 +114,7 @@ class _OnBoardingViewState extends State<OnBoardingView> {
               onTap: () {
                 //Go to previous page
                 _pageController.animateToPage(
-                  _getPreviousIndex(),
+                  _viewModel.goPrevious(),
                   duration:
                       const Duration(milliseconds: DurationConstants.d300),
                   curve: Curves.bounceInOut,
@@ -125,10 +126,10 @@ class _OnBoardingViewState extends State<OnBoardingView> {
           //Circles
           Row(
             children: [
-              for (int i = 0; i < _list.length; i++)
+              for (int i = 0; i < sliderViewObject.numOfSlides; i++)
                 Padding(
                   padding: const EdgeInsets.all(AppPadding.p8),
-                  child: _getProperCircle(i),
+                  child: _getProperCircle(i, sliderViewObject.currentIndex),
                 ),
             ],
           ),
@@ -145,7 +146,7 @@ class _OnBoardingViewState extends State<OnBoardingView> {
               onTap: () {
                 //Go to next page
                 _pageController.animateToPage(
-                  _getNextIndex(),
+                  _viewModel.goNext(),
                   duration:
                       const Duration(milliseconds: DurationConstants.d300),
                   curve: Curves.bounceInOut,
@@ -158,28 +159,18 @@ class _OnBoardingViewState extends State<OnBoardingView> {
     );
   }
 
-  int _getPreviousIndex() {
-    int previousIndex = _currentIndex--;
-    if (previousIndex == -1) {
-      _currentIndex = _list.length - 1;
-    }
-    return _currentIndex;
-  }
-
-  int _getNextIndex() {
-    int nextIndex = _currentIndex++;
-    if (nextIndex == _list.length - 1) {
-      _currentIndex = 0;
-    }
-    return _currentIndex;
-  }
-
-  Widget _getProperCircle(int index) {
+  Widget _getProperCircle(int index, int _currentIndex) {
     if (index == _currentIndex) {
       return SvgPicture.asset(ImageAssets.solidCircleIc);
     } else {
       return SvgPicture.asset(ImageAssets.hollowCircleIc);
     }
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
   }
 }
 
@@ -217,12 +208,4 @@ class OnBoardingPage extends StatelessWidget {
       ],
     );
   }
-}
-
-class SliderObject {
-  String title;
-  String subtitle;
-  String image;
-
-  SliderObject(this.title, this.subtitle, this.image);
 }
