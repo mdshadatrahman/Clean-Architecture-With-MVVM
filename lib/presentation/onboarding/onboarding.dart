@@ -26,6 +26,7 @@ class _OnBoardingViewState extends State<OnBoardingView> {
     _viewModel.start();
   }
 
+
   @override
   void initState() {
     _bind();

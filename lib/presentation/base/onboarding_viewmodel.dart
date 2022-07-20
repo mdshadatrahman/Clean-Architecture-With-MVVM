@@ -34,6 +34,7 @@ class OnBoardingViewModel extends BaseViewModel
 
   }
 
+
   @override
   int goPrevious() {
     int previousIndex = _currentIndex--;
